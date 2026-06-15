@@ -39,7 +39,7 @@ func Unpack(s string) (string, error) {
 		} else {
 			b.WriteRune(r[i])
 		}
-		
+
 		escaped = false
 	}
 
