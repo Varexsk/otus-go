@@ -3,11 +3,25 @@ package hw03frequencyanalysis
 import (
 	"sort"
 	"strings"
+	"unicode"
 )
 
 type kv struct {
 	key   string
 	value int
+}
+
+func normalize(word string) string {
+	word = strings.ToLower(word)
+
+	word = strings.TrimFunc(word, func(r rune) bool {
+		if r == '-' {
+			return false
+		}
+		return unicode.IsPunct(r)
+	})
+
+	return word
 }
 
 func Top10(s string) []string {
@@ -16,7 +30,13 @@ func Top10(s string) []string {
 	words := strings.Fields(s)
 
 	for i := range words {
-		wmap[words[i]]++
+		word := normalize(words[i])
+
+		if word == "" || word == "-" {
+			continue
+		}
+
+		wmap[word]++
 	}
 
 	sl := make([]kv, 0, len(wmap))
