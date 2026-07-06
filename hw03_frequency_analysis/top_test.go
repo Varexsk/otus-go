@@ -43,9 +43,45 @@ var text = `Как видите, он  спускается  по  лестни�
 	посидеть у огня и послушать какую-нибудь интересную сказку.
 		В этот вечер...`
 
+var textOnlyWord = `пруд пруд Пруд пруд Пруд Пруд Пруд Пруд`
+
+var text5Words = `Пруд кругом пруд. Кругом только пруд. Пруд Кругом и Везде`
+
+var textBroken = `	
+
+				
+\
+\
+*
+
+\\\\\\\\\\
+`
+
+var textDash = `-----------, -----------`
+
 func TestTop10(t *testing.T) {
 	t.Run("no words in empty string", func(t *testing.T) {
 		require.Len(t, Top10(""), 0)
+	})
+
+	t.Run("only one word", func(t *testing.T) {
+		result := Top10(textOnlyWord)
+		require.Equal(t, []string{"пруд"}, result)
+	})
+
+	t.Run("5 words", func(t *testing.T) {
+		result := Top10(text5Words)
+		require.Equal(t, []string{"пруд", "кругом", "везде", "и", "только"}, result)
+	})
+
+	t.Run("broken text", func(t *testing.T) {
+		result := Top10(textBroken)
+		require.Len(t, result, 0)
+	})
+
+	t.Run("dash test", func(t *testing.T) {
+		result := Top10(textDash)
+		require.Equal(t, []string{"-----------"}, result)
 	})
 
 	t.Run("positive test", func(t *testing.T) {
