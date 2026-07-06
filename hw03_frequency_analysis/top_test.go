@@ -7,7 +7,7 @@ import (
 )
 
 // Change to true if needed.
-var taskWithAsteriskIsCompleted = false
+var taskWithAsteriskIsCompleted = true
 
 var text = `Как видите, он  спускается  по  лестнице  вслед  за  своим
 	другом   Кристофером   Робином,   головой   вниз,  пересчитывая
@@ -15,7 +15,7 @@ var text = `Как видите, он  спускается  по  лестни�
 	сходить  с  лестницы  он  пока  не  знает.  Иногда ему, правда,
 		кажется, что можно бы найти какой-то другой способ, если бы  он
 	только   мог   на  минутку  перестать  бумкать  и  как  следует
-	сосредоточиться. Но увы - сосредоточиться-то ему и некогда.
+	сосредоточиться. Но увы - соср едоточиться-то ему и некогда.
 		Как бы то ни было, вот он уже спустился  и  готов  с  вами
 	познакомиться.
 	- Винни-Пух. Очень приятно!
@@ -43,9 +43,45 @@ var text = `Как видите, он  спускается  по  лестни�
 	посидеть у огня и послушать какую-нибудь интересную сказку.
 		В этот вечер...`
 
+var textOnlyWord = `пруд пруд Пруд пруд Пруд Пруд Пруд Пруд`
+
+var text5Words = `Пруд кругом пруд. Кругом только пруд. Пруд Кругом и Везде`
+
+var textBroken = `	
+
+				
+\
+\
+*
+
+\\\\\\\\\\
+`
+
+var textDash = `-----------, -----------`
+
 func TestTop10(t *testing.T) {
 	t.Run("no words in empty string", func(t *testing.T) {
 		require.Len(t, Top10(""), 0)
+	})
+
+	t.Run("only one word", func(t *testing.T) {
+		result := Top10(textOnlyWord)
+		require.Equal(t, []string{"пруд"}, result)
+	})
+
+	t.Run("5 words", func(t *testing.T) {
+		result := Top10(text5Words)
+		require.Equal(t, []string{"пруд", "кругом", "везде", "и", "только"}, result)
+	})
+
+	t.Run("broken text", func(t *testing.T) {
+		result := Top10(textBroken)
+		require.Len(t, result, 0)
+	})
+
+	t.Run("dash test", func(t *testing.T) {
+		result := Top10(textDash)
+		require.Equal(t, []string{"-----------"}, result)
 	})
 
 	t.Run("positive test", func(t *testing.T) {
