@@ -15,6 +15,21 @@ func TestList(t *testing.T) {
 		require.Nil(t, l.Back())
 	})
 
+	t.Run("reverse", func(t *testing.T) {
+		l := NewList()
+
+		for i := range 10 {
+			l.PushBack(i * 10)
+		}
+
+		elems := make([]int, 0, l.Len())
+		for i := l.Back(); i != nil; i = i.Prev {
+			elems = append(elems, i.Value.(int))
+		}
+
+		require.Equal(t, []int{90, 80, 70, 60, 50, 40, 30, 20, 10, 0}, elems)
+	})
+
 	t.Run("complex", func(t *testing.T) {
 		l := NewList()
 
@@ -29,9 +44,9 @@ func TestList(t *testing.T) {
 
 		for i, v := range [...]int{40, 50, 60, 70, 80} {
 			if i%2 == 0 {
-				l.PushFront(v)
+				l.PushFront(v, nil)
 			} else {
-				l.PushBack(v)
+				l.PushBack(v, nil)
 			}
 		} // [80, 60, 40, 10, 30, 50, 70]
 
