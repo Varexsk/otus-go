@@ -5,15 +5,14 @@ type List interface {
 	ResetLen()
 	Front() *ListItem
 	Back() *ListItem
-	PushFront(v ...any) *ListItem
-	PushBack(v ...any) *ListItem
+	PushFront(v interface{}) *ListItem
+	PushBack(v interface{}) *ListItem
 	Remove(i *ListItem)
 	MoveToFront(i *ListItem)
 }
 
 type ListItem struct {
-	Value any
-	Key   any
+	Value interface{}
 	Next  *ListItem
 	Prev  *ListItem
 }
@@ -40,15 +39,11 @@ func (l *list) Back() *ListItem {
 	return l.tail
 }
 
-func (l *list) PushFront(v ...any) *ListItem {
+func (l *list) PushFront(v interface{}) *ListItem {
 	l.len++
 
 	li := &ListItem{
-		Value: v[0],
-	}
-
-	if len(v) > 1 {
-		li.Key = v[1]
+		Value: v,
 	}
 
 	if l.head == nil {
@@ -63,15 +58,11 @@ func (l *list) PushFront(v ...any) *ListItem {
 	return li
 }
 
-func (l *list) PushBack(v ...any) *ListItem {
+func (l *list) PushBack(v interface{}) *ListItem {
 	l.len++
 
 	li := &ListItem{
-		Value: v[0],
-	}
-
-	if len(v) > 1 {
-		li.Key = v[1]
+		Value: v,
 	}
 
 	if l.tail == nil {
@@ -87,52 +78,30 @@ func (l *list) PushBack(v ...any) *ListItem {
 }
 
 func (l *list) Remove(li *ListItem) {
-	if li == l.head {
+	if li.Prev != nil {
+		li.Prev.Next = li.Next
+	} else {
 		l.head = li.Next
-		li.Next = nil
-		l.len--
-		return
 	}
-	if li == l.tail {
+	if li.Next != nil {
+		li.Next.Prev = li.Prev
+	} else {
 		l.tail = li.Prev
-		li.Prev = nil
-		l.len--
-		return
 	}
-
-	// Соединяем соседние элементы друг с другом
-	li.Prev.Next = li.Next
-	li.Next.Prev = li.Prev
-
+	li.Next, li.Prev = nil, nil
 	l.len--
 }
+
 
 func (l *list) MoveToFront(li *ListItem) {
 	if li == l.head {
 		return
 	}
-	if li == l.tail {
-		// Помечаем предыдущий элемент последним
-		li.Prev.Next = nil
-		l.tail = li.Prev
-
-		// Перемещаем элемент в начало
-		li.Prev = nil
-		li.Next = l.head
-		l.head.Prev = li
-		l.head = li
-		return
-	}
-
-	// Соединяем соседние элементы друг с другом
-	li.Prev.Next = li.Next
-	li.Next.Prev = li.Prev
-
-	// Перемещаем элемент в начало
-	li.Prev = nil
+	l.Remove(li)
 	li.Next = l.head
 	l.head.Prev = li
 	l.head = li
+	l.len++
 }
 
 func NewList() List {

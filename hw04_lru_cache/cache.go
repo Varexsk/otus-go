@@ -5,8 +5,8 @@ import "sync"
 type Key string
 
 type Cache interface {
-	Set(key Key, value any) bool
-	Get(key Key) (any, bool)
+	Set(key Key, value interface{}) bool
+	Get(key Key) (interface{}, bool)
 	Clear()
 }
 
@@ -17,35 +17,49 @@ type lruCache struct {
 	mu       sync.RWMutex
 }
 
-func (l *lruCache) Set(key Key, value any) bool {
+type CacheItem struct {
+	Value interface{}
+	Key Key
+}
+
+func (l *lruCache) Set(key Key, value interface{}) bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
 	item, ok := l.items[key]
 	if ok {
-		item.Value = value
+		item.Value = CacheItem{
+			Value: value,
+			Key: key,
+		}
 		l.queue.MoveToFront(item)
 	} else {
-		if l.queue.Len() > l.capacity {
+		if l.queue.Len() >= l.capacity {
 			li := l.queue.Back()
 			l.queue.Remove(li)
-			delete(l.items, li.Key.(Key))
+			delete(l.items, li.Value.(CacheItem).Key)
 		}
-		li := l.queue.PushFront(value, key)
+
+		ci := CacheItem{
+			Value: value,
+			Key: key,
+		}
+
+		li := l.queue.PushFront(ci)
 		l.items[key] = li
 	}
 
 	return ok
 }
 
-func (l *lruCache) Get(key Key) (any, bool) {
-	l.mu.RLock()
-	defer l.mu.RUnlock()
+func (l *lruCache) Get(key Key) (interface{}, bool) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
 
 	item, ok := l.items[key]
 	if ok {
 		l.queue.MoveToFront(item)
-		return item.Value, ok
+		return item.Value.(CacheItem).Value, ok
 	}
 	return nil, ok
 }
@@ -55,13 +69,9 @@ func (l *lruCache) Clear() {
 	defer l.mu.Unlock()
 
 	l.items = make(map[Key]*ListItem, l.capacity)
-
-	if l.queue.Len() > 0 {
-		l.queue.Front().Next = nil
-		l.queue.Back().Prev = nil
-		l.queue.ResetLen()
-	}
+	l.queue = NewList()
 }
+
 
 func NewCache(capacity int) Cache {
 	return &lruCache{

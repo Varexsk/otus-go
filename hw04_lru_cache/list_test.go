@@ -44,9 +44,9 @@ func TestList(t *testing.T) {
 
 		for i, v := range [...]int{40, 50, 60, 70, 80} {
 			if i%2 == 0 {
-				l.PushFront(v, nil)
+				l.PushFront(v)
 			} else {
-				l.PushBack(v, nil)
+				l.PushBack(v)
 			}
 		} // [80, 60, 40, 10, 30, 50, 70]
 
