@@ -49,13 +49,70 @@ func TestCache(t *testing.T) {
 		require.Nil(t, val)
 	})
 
+	t.Run("clear logic", func(t *testing.T) {
+		c := NewCache(5)
+		c.Set(Key("0"), 0)
+		c.Set(Key("1"), 1)
+		c.Set(Key("2"), 2)
+		c.Set(Key("3"), 3)
+		c.Set(Key("4"), 4)
+
+		c.Clear()
+
+		for i := range 5 {
+			v, ok := c.Get(Key(strconv.Itoa(i)))
+			require.Equal(t, false, ok)
+			require.Nil(t, v)
+		}
+	})
+
 	t.Run("purge logic", func(t *testing.T) {
-		// Write me
+		c := NewCache(3)
+
+		c.Set(Key("0"), 0)
+		c.Set(Key("1"), 1)
+		c.Set(Key("2"), 2)
+
+		c.Set(Key("3"), 3)
+
+		_, ok := c.Get(Key("0"))
+		require.Equal(t, false, ok)
+
+		_, ok = c.Get(Key("1"))
+		require.Equal(t, true, ok)
+
+		_, ok = c.Get(Key("2"))
+		require.Equal(t, true, ok)
+
+		_, ok = c.Get(Key("3"))
+		require.Equal(t, true, ok)
+	})
+
+	t.Run("purge logic with access", func(t *testing.T) {
+		c := NewCache(3)
+
+		c.Set(Key("0"), 0)
+		c.Set(Key("1"), 1)
+		c.Set(Key("2"), 2)
+
+		c.Get(Key("0"))
+		c.Get(Key("1"))
+
+		c.Set(Key("3"), 3)
+
+		_, ok := c.Get(Key("0"))
+		require.Equal(t, true, ok)
+
+		_, ok = c.Get(Key("1"))
+		require.Equal(t, true, ok)
+
+		_, ok = c.Get(Key("2"))
+		require.Equal(t, false, ok)
 	})
 }
 
 func TestCacheMultithreading(t *testing.T) {
-	t.Skip() // Remove me if task with asterisk completed.
+	_ = t
 
 	c := NewCache(10)
 	wg := &sync.WaitGroup{}
