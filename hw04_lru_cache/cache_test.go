@@ -96,7 +96,7 @@ func TestCache(t *testing.T) {
 		c.Set(Key("2"), 2)
 
 		c.Get(Key("0"))
-		c.Get(Key("1"))	
+		c.Get(Key("1"))
 
 		c.Set(Key("3"), 3)
 

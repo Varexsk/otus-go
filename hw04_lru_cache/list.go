@@ -92,7 +92,6 @@ func (l *list) Remove(li *ListItem) {
 	l.len--
 }
 
-
 func (l *list) MoveToFront(li *ListItem) {
 	if li == l.head {
 		return
