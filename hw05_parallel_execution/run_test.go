@@ -68,3 +68,65 @@ func TestRun(t *testing.T) {
 		require.LessOrEqual(t, int64(elapsedTime), int64(sumTime/2), "tasks were run sequentially?")
 	})
 }
+
+func TestRunConcurrency(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
+	const (
+		tasksCount   = 50
+		workersCount = 5
+		waitFor      = 5 * time.Second
+		tick         = time.Millisecond
+	)
+
+	var activeCount, maxActiveCount, doneCount atomic.Int32
+
+	release := make(chan struct{})
+
+	tasks := make([]Task, 0, tasksCount)
+	for range tasksCount {
+		tasks = append(tasks, func() error {
+			active := activeCount.Add(1)
+			for {
+				observed := maxActiveCount.Load()
+				if active <= observed || maxActiveCount.CompareAndSwap(observed, active) {
+					break
+				}
+			}
+
+			<-release
+
+			activeCount.Add(-1)
+			doneCount.Add(1)
+
+			return nil
+		})
+	}
+
+	var runErr error
+	runFinished := make(chan struct{})
+
+	go func() {
+		defer close(runFinished)
+		runErr = Run(tasks, workersCount, 1)
+	}()
+
+	require.Eventually(t, func() bool {
+		return activeCount.Load() == int32(workersCount)
+	}, waitFor, tick, "expected %d tasks to run simultaneously", workersCount)
+
+	close(release)
+
+	require.Eventually(t, func() bool {
+		select {
+		case <-runFinished:
+			return true
+		default:
+			return false
+		}
+	}, waitFor, tick, "Run did not return after all tasks were released")
+
+	require.NoError(t, runErr)
+	require.Equal(t, int32(tasksCount), doneCount.Load(), "not all tasks were completed")
+	require.LessOrEqual(t, maxActiveCount.Load(), int32(workersCount), "more than n tasks were run simultaneously")
+}
