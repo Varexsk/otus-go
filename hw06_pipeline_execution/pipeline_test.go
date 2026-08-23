@@ -1,6 +1,7 @@
 package hw06pipelineexecution
 
 import (
+	"runtime"
 	"strconv"
 	"sync"
 	"testing"
@@ -145,6 +146,114 @@ func TestAllStageStop(t *testing.T) {
 		wg.Wait()
 
 		require.Len(t, result, 0)
-
 	})
+}
+
+func TestPipelineEdgeCases(t *testing.T) {
+	g := func(_ string, f func(v interface{}) interface{}) Stage {
+		return func(in In) Out {
+			out := make(Bi)
+			go func() {
+				defer close(out)
+				for v := range in {
+					time.Sleep(sleepPerStage)
+					out <- f(v)
+				}
+			}()
+			return out
+		}
+	}
+
+	stages := []Stage{
+		g("Dummy", func(v interface{}) interface{} { return v }),
+		g("Multiplier (* 2)", func(v interface{}) interface{} { return v.(int) * 2 }),
+		g("Adder (+ 100)", func(v interface{}) interface{} { return v.(int) + 100 }),
+		g("Stringifier", func(v interface{}) interface{} { return strconv.Itoa(v.(int)) }),
+	}
+
+	t.Run("empty input", func(t *testing.T) {
+		in := make(Bi)
+		close(in)
+
+		result := make([]interface{}, 0)
+		for v := range ExecutePipeline(in, nil, stages...) {
+			result = append(result, v)
+		}
+		require.Empty(t, result)
+	})
+
+	t.Run("done closed before start", func(t *testing.T) {
+		in := make(Bi)
+		done := make(Bi)
+		close(done)
+
+		go func() {
+			defer close(in)
+			for i := 0; i < 5; i++ {
+				in <- i
+			}
+		}()
+
+		start := time.Now()
+		result := make([]interface{}, 0)
+		for v := range ExecutePipeline(in, done, stages...) {
+			result = append(result, v)
+		}
+
+		require.Empty(t, result)
+		require.Less(t, time.Since(start), sleepPerStage)
+	})
+}
+
+func TestNoGoroutineLeak(t *testing.T) {
+	g := func(f func(v interface{}) interface{}) Stage {
+		return func(in In) Out {
+			out := make(Bi)
+			go func() {
+				defer close(out)
+				for v := range in {
+					time.Sleep(sleepPerStage)
+					out <- f(v)
+				}
+			}()
+			return out
+		}
+	}
+
+	stages := []Stage{
+		g(func(v interface{}) interface{} { return v }),
+		g(func(v interface{}) interface{} { return v.(int) * 2 }),
+		g(func(v interface{}) interface{} { return v.(int) + 100 }),
+		g(func(v interface{}) interface{} { return strconv.Itoa(v.(int)) }),
+	}
+
+	before := runtime.NumGoroutine()
+
+	in := make(Bi)
+	done := make(Bi)
+
+	go func() {
+		defer close(in)
+		for i := 0; i < 100; i++ {
+			in <- i
+		}
+	}()
+
+	go func() {
+		time.Sleep(sleepPerStage * 2)
+		close(done)
+	}()
+
+	for range ExecutePipeline(in, done, stages...) { //nolint:revive
+	}
+
+	after := runtime.NumGoroutine()
+
+	for i := 0; i < 100 && after > before; i++ {
+		time.Sleep(10 * time.Millisecond)
+		after = runtime.NumGoroutine()
+	}
+
+	require.LessOrEqual(t, after, before,
+		"после отмены остались висящие горутины (на старте было %d)", before)
 }
