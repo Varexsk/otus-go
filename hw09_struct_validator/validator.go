@@ -29,8 +29,10 @@ var (
 	ErrMax    = errors.New("value is greater than the maximum")
 )
 
-const tagName = "validate"
-const nestedRule = "nested"
+const (
+	tagName    = "validate"
+	nestedRule = "nested"
+)
 
 type ValidationError struct {
 	Field string
