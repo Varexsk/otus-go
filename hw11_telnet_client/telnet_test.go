@@ -62,4 +62,62 @@ func TestTelnetClient(t *testing.T) {
 
 		wg.Wait()
 	})
+
+	// Подключение к порту, который никто не слушает
+	t.Run("connection refused", func(t *testing.T) {
+		l, err := net.Listen("tcp", "127.0.0.1:")
+		require.NoError(t, err)
+		addr := l.Addr().String()
+		require.NoError(t, l.Close())
+
+		client := NewTelnetClient(addr, time.Second, io.NopCloser(&bytes.Buffer{}), &bytes.Buffer{})
+		require.Error(t, client.Connect())
+
+		require.NoError(t, client.Close())
+	})
+
+	// Некорректный адрес сети. Нет порта
+	t.Run("invalid address", func(t *testing.T) {
+		client := NewTelnetClient("localhost", time.Second, io.NopCloser(&bytes.Buffer{}), &bytes.Buffer{})
+		err := client.Connect()
+		require.Error(t, err)
+		var opErr *net.OpError
+		require.ErrorAs(t, err, &opErr)
+	})
+
+	t.Run("close without connect", func(t *testing.T) {
+		client := NewTelnetClient("127.0.0.1:0", time.Second, io.NopCloser(&bytes.Buffer{}), &bytes.Buffer{})
+		require.NoError(t, client.Close())
+	})
+
+	// Сервер закрыл соединение
+	t.Run("closed by peer", func(t *testing.T) {
+		l, err := net.Listen("tcp", "127.0.0.1:")
+		require.NoError(t, err)
+		defer l.Close()
+
+		go func() {
+			conn, err := l.Accept()
+			if err != nil {
+				return
+			}
+			conn.Close()
+		}()
+
+		in := &bytes.Buffer{}
+		client := NewTelnetClient(l.Addr().String(), time.Second, io.NopCloser(in), &bytes.Buffer{})
+		require.NoError(t, client.Connect())
+		defer client.Close()
+
+		require.NoError(t, client.Receive())
+
+		for i := 0; i < 10; i++ {
+			in.WriteString("ping\n")
+			if err = client.Send(); err != nil {
+				break
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
+		require.Error(t, err)
+	})
 }
