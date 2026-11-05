@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"net"
 	"slices"
+	"strconv"
 
 	"github.com/spf13/viper"
 )
@@ -10,8 +12,8 @@ import (
 type StorageType string
 
 const (
-	Postgres StorageType = "postgres"
-	Memory   StorageType = "memory"
+	Sql    StorageType = "sql"
+	Memory StorageType = "memory"
 )
 
 type Config struct {
@@ -58,11 +60,15 @@ func (c Config) validate() error {
 	if c.Server.Port <= 0 || c.Server.Port > 65535 {
 		return fmt.Errorf("server port must be a valid TCP port")
 	}
-	if !slices.Contains([]StorageType{Postgres, Memory}, c.Storage.Type) {
+	if !slices.Contains([]StorageType{Sql, Memory}, c.Storage.Type) {
 		return fmt.Errorf("invalid storage type: %s", c.Storage.Type)
 	}
-	if c.Storage.Type == Postgres && c.Storage.DSN == "" {
-		return fmt.Errorf("storage DSN is required for postgres")
+	if c.Storage.Type == Sql && c.Storage.DSN == "" {
+		return fmt.Errorf("storage DSN is required for sql")
 	}
 	return nil
+}
+
+func (c Config) ServerAddress() string {
+	return net.JoinHostPort(c.Server.Host, strconv.Itoa(c.Server.Port))
 }

@@ -9,7 +9,7 @@ func TestLevelFiltering(t *testing.T) {
 	tests := []struct {
 		name    string
 		level   string
-		call    func(*Logger, string)
+		call    func(*Logger, string, ...any)
 		visible bool
 	}{
 		{"debug shown at debug", "debug", (*Logger).Debug, true},

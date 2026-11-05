@@ -21,18 +21,18 @@ func New(level string, w io.Writer) (*Logger, error) {
 	}, nil
 }
 
-func (l Logger) Info(msg string) {
-	l.log.Info(msg)
+func (l Logger) Info(msg string, args ...any) {
+	l.log.Info(msg, args...)
 }
 
-func (l Logger) Error(msg string) {
-	l.log.Error(msg)
+func (l Logger) Error(msg string, args ...any) {
+	l.log.Error(msg, args...)
 }
 
-func (l Logger) Debug(msg string) {
-	l.log.Debug(msg)
+func (l Logger) Debug(msg string, args ...any) {
+	l.log.Debug(msg, args...)
 }
 
-func (l Logger) Warn(msg string) {
-	l.log.Warn(msg)
+func (l Logger) Warn(msg string, args ...any) {
+	l.log.Warn(msg, args...)
 }

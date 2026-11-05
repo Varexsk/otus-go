@@ -5,8 +5,9 @@ import "context"
 type Storage struct { // TODO
 }
 
-func New() *Storage {
-	return &Storage{}
+func New(dsn string) (*Storage, error) {
+	// TODO: Initialize the SQL storage with the provided DSN
+	return &Storage{}, nil
 }
 
 func (s *Storage) Connect(ctx context.Context) error {

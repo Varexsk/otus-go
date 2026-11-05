@@ -13,6 +13,7 @@ import (
 	"github.com/varexsk/hw12_13_14_15_calendar/internal/logger"
 	internalhttp "github.com/varexsk/hw12_13_14_15_calendar/internal/server/http"
 	memorystorage "github.com/varexsk/hw12_13_14_15_calendar/internal/storage/memory"
+	sqltorage "github.com/varexsk/hw12_13_14_15_calendar/internal/storage/sql"
 )
 
 var configFile string
@@ -40,16 +41,29 @@ func main() {
 		os.Exit(2)
 	}
 
-	storage := memorystorage.New()
+	var storage app.Storage
+	switch config.Storage.Type {
+	case Sql:
+		storage, err = sqltorage.New(config.Storage.DSN)
+		if err != nil {
+			logg.Error("failed to create SQL storage: " + err.Error())
+			os.Exit(2)
+		}
+	case Memory:
+		storage = memorystorage.New()
+	}
+
 	calendar := app.New(logg, storage)
 
-	server := internalhttp.NewServer(logg, calendar)
+	server := internalhttp.NewServer(logg, calendar, config.ServerAddress())
 
 	ctx, cancel := signal.NotifyContext(context.Background(),
 		syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 	defer cancel()
 
+	stopped := make(chan struct{})
 	go func() {
+		defer close(stopped)
 		<-ctx.Done()
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
@@ -67,4 +81,7 @@ func main() {
 		cancel()
 		os.Exit(1) //nolint:gocritic
 	}
+
+	<-stopped
+	logg.Info("calendar stopped")
 }
