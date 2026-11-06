@@ -24,6 +24,7 @@ type Config struct {
 
 type LoggerConf struct {
 	Level string
+	Output string
 }
 
 type ServerConf struct {

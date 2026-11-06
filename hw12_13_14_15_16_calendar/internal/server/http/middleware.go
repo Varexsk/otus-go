@@ -24,6 +24,7 @@ func chain(h http.Handler, mws ...middleware) http.Handler {
 	}
 	return h
 }
+
 func loggingMiddleware(logg Logger) middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

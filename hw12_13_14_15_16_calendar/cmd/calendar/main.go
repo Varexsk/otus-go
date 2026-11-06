@@ -4,8 +4,10 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -35,7 +37,19 @@ func main() {
 		fmt.Fprintln(os.Stderr, "failed to load config: "+err.Error())
 		os.Exit(2)
 	}
-	logg, err := logger.New(config.Logger.Level, os.Stdout)
+
+	var out io.Writer = os.Stdout
+	if path := config.Logger.Output; path != "" {
+		os.MkdirAll(filepath.Dir(path), 0o755)
+		f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "failed to open log file: "+err.Error())
+			os.Exit(2)
+		}
+		defer f.Close()
+		out = f
+	}
+	logg, err := logger.New(config.Logger.Level, out)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "failed to create logger: "+err.Error())
 		os.Exit(2)

@@ -12,6 +12,7 @@ type Logger struct {
 
 func New(level string, w io.Writer) (*Logger, error) {
 	var lvl slog.Level
+
 	if err := lvl.UnmarshalText([]byte(level)); err != nil {
 		return nil, fmt.Errorf("parse log level: %w", err)
 	}
