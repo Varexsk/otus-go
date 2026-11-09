@@ -12,7 +12,7 @@ import (
 type StorageType string
 
 const (
-	Sql    StorageType = "sql"
+	SQL    StorageType = "sql"
 	Memory StorageType = "memory"
 )
 
@@ -23,7 +23,7 @@ type Config struct {
 }
 
 type LoggerConf struct {
-	Level string
+	Level  string
 	Output string
 }
 
@@ -61,10 +61,10 @@ func (c Config) validate() error {
 	if c.Server.Port <= 0 || c.Server.Port > 65535 {
 		return fmt.Errorf("server port must be a valid TCP port")
 	}
-	if !slices.Contains([]StorageType{Sql, Memory}, c.Storage.Type) {
+	if !slices.Contains([]StorageType{SQL, Memory}, c.Storage.Type) {
 		return fmt.Errorf("invalid storage type: %s", c.Storage.Type)
 	}
-	if c.Storage.Type == Sql && c.Storage.DSN == "" {
+	if c.Storage.Type == SQL && c.Storage.DSN == "" {
 		return fmt.Errorf("storage DSN is required for sql")
 	}
 	return nil

@@ -15,7 +15,7 @@ import (
 	"github.com/varexsk/hw12_13_14_15_calendar/internal/logger"
 	internalhttp "github.com/varexsk/hw12_13_14_15_calendar/internal/server/http"
 	memorystorage "github.com/varexsk/hw12_13_14_15_calendar/internal/storage/memory"
-	sqltorage "github.com/varexsk/hw12_13_14_15_calendar/internal/storage/sql"
+	sqlstorage "github.com/varexsk/hw12_13_14_15_calendar/internal/storage/sql"
 )
 
 var configFile string
@@ -32,36 +32,42 @@ func main() {
 		return
 	}
 
+	if err := run(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	config, err := NewConfig(configFile)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "failed to load config: "+err.Error())
-		os.Exit(2)
+		return fmt.Errorf("load config: %w", err)
 	}
 
 	var out io.Writer = os.Stdout
 	if path := config.Logger.Output; path != "" {
-		os.MkdirAll(filepath.Dir(path), 0o755)
+		err := os.MkdirAll(filepath.Dir(path), 0o755)
+		if err != nil {
+			return fmt.Errorf("create log folder: %w", err)
+		}
 		f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "failed to open log file: "+err.Error())
-			os.Exit(2)
+			return fmt.Errorf("open log file: %w", err)
 		}
 		defer f.Close()
 		out = f
 	}
 	logg, err := logger.New(config.Logger.Level, out)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "failed to create logger: "+err.Error())
-		os.Exit(2)
+		return fmt.Errorf("create logger: %w", err)
 	}
 
 	var storage app.Storage
 	switch config.Storage.Type {
-	case Sql:
-		storage, err = sqltorage.New(config.Storage.DSN)
+	case SQL:
+		storage, err = sqlstorage.New(config.Storage.DSN)
 		if err != nil {
-			logg.Error("failed to create SQL storage: " + err.Error())
-			os.Exit(2)
+			return fmt.Errorf("create SQL storage: %w", err)
 		}
 	case Memory:
 		storage = memorystorage.New()
@@ -84,18 +90,19 @@ func main() {
 		defer cancel()
 
 		if err := server.Stop(ctx); err != nil {
-			logg.Error("failed to stop http server: " + err.Error())
+			logg.Error("stop http server: " + err.Error())
 		}
 	}()
 
 	logg.Info("calendar is running...")
 
 	if err := server.Start(ctx); err != nil {
-		logg.Error("failed to start http server: " + err.Error())
 		cancel()
-		os.Exit(1) //nolint:gocritic
+		return fmt.Errorf("start http server: %w", err)
 	}
 
 	<-stopped
 	logg.Info("calendar stopped")
+
+	return nil
 }

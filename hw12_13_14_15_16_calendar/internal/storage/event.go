@@ -7,11 +7,11 @@ import (
 )
 
 type Event struct {
-	ID               uuid.UUID
-	Title            string
-	Date             time.Time
-	EndDate          time.Time
-	Body             string
-	UserID           uint
-	NotificationTime time.Duration
+	ID           uuid.UUID
+	Title        string
+	StartAt      time.Time
+	EndAt        time.Time
+	Body         string
+	UserID       int64
+	NotifyBefore time.Duration
 }

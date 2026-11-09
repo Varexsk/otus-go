@@ -18,12 +18,15 @@ linters-settings:
           - $gostd
           - github.com/varexsk/hw12_13_14_15_calendar
           - github.com/spf13/viper
+          - github.com/google/uuid
       Test:
         files:
           - $test
         allow:
           - $gostd
           - github.com/stretchr/testify
+          - github.com/varexsk/hw12_13_14_15_calendar
+          - github.com/google/uuid
 issues:
   exclude-rules:
     - path: _test\.go
