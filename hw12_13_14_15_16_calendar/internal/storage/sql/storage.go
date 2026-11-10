@@ -7,16 +7,42 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	_ "github.com/jackc/pgx/v5/stdlib" // регистрирует драйвер "pgx" в database/sql
+	"github.com/jackc/pgx/v5/pgconn"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
 	"github.com/varexsk/hw12_13_14_15_calendar/internal/storage"
 )
 
-var errNotImplemented = errors.New("not implemented")
+const (
+	codeUniqueViolation    = "23505"
+	codeExclusionViolation = "23P01"
+)
 
 type Storage struct {
 	dsn string
 	db  *sqlx.DB
+}
+
+type eventRow struct {
+	ID           uuid.UUID `db:"id"`
+	Title        string    `db:"title"`
+	StartAt      time.Time `db:"start_at"`
+	EndAt        time.Time `db:"end_at"`
+	Description  string    `db:"description"`
+	UserID       int64     `db:"user_id"`
+	NotifyBefore int64     `db:"notify_before"`
+}
+
+func (r eventRow) toEvent() storage.Event {
+	return storage.Event{
+		ID:           r.ID,
+		Title:        r.Title,
+		StartAt:      r.StartAt,
+		EndAt:        r.EndAt,
+		Description:  r.Description,
+		UserID:       r.UserID,
+		NotifyBefore: time.Duration(r.NotifyBefore),
+	}
 }
 
 func New(dsn string) *Storage {
@@ -42,18 +68,83 @@ func (s *Storage) Close(_ context.Context) error {
 	return nil
 }
 
-func (s *Storage) CreateEvent(_ context.Context, _ storage.Event) error {
-	return errNotImplemented
+func (s *Storage) CreateEvent(ctx context.Context, event storage.Event) error {
+	const query = `
+		INSERT INTO events (id, title, start_at, end_at, description, user_id, notify_before)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)`
+
+	_, err := s.db.ExecContext(ctx, query,
+		event.ID, event.Title, event.StartAt, event.EndAt,
+		event.Description, event.UserID, int64(event.NotifyBefore))
+	if err != nil {
+		return fmt.Errorf("insert event: %w", mapError(err))
+	}
+	return nil
 }
 
-func (s *Storage) DeleteEvent(_ context.Context, _ uuid.UUID) error {
-	return errNotImplemented
+func (s *Storage) UpdateEvent(ctx context.Context, id uuid.UUID, event storage.Event) error {
+	const query = `
+		UPDATE events
+		SET title = $2, start_at = $3, end_at = $4, description = $5, user_id = $6, notify_before = $7
+		WHERE id = $1`
+
+	res, err := s.db.ExecContext(ctx, query,
+		id, event.Title, event.StartAt, event.EndAt,
+		event.Description, event.UserID, int64(event.NotifyBefore))
+	if err != nil {
+		return fmt.Errorf("update event: %w", mapError(err))
+	}
+	return checkAffected(res.RowsAffected())
 }
 
-func (s *Storage) UpdateEvent(_ context.Context, _ uuid.UUID, _ storage.Event) error {
-	return errNotImplemented
+func (s *Storage) DeleteEvent(ctx context.Context, id uuid.UUID) error {
+	res, err := s.db.ExecContext(ctx, `DELETE FROM events WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete event: %w", err)
+	}
+	return checkAffected(res.RowsAffected())
 }
 
-func (s *Storage) ListEvents(_ context.Context, _, _ time.Time) ([]storage.Event, error) {
-	return nil, errNotImplemented
+func (s *Storage) ListEvents(ctx context.Context, from, to time.Time) ([]storage.Event, error) {
+	const query = `
+		SELECT id, title, start_at, end_at, description, user_id, notify_before
+		FROM events
+		WHERE start_at < $2 AND end_at > $1
+		ORDER BY start_at`
+
+	var rows []eventRow
+	if err := s.db.SelectContext(ctx, &rows, query, from, to); err != nil {
+		return nil, fmt.Errorf("select events: %w", err)
+	}
+
+	events := make([]storage.Event, 0, len(rows))
+	for _, r := range rows {
+		events = append(events, r.toEvent())
+	}
+	return events, nil
+}
+
+func checkAffected(n int64, err error) error {
+	if err != nil {
+		return fmt.Errorf("rows affected: %w", err)
+	}
+	if n == 0 {
+		return storage.ErrEventNotFound
+	}
+	return nil
+}
+
+func mapError(err error) error {
+	var pgErr *pgconn.PgError
+	if !errors.As(err, &pgErr) {
+		return err
+	}
+	switch pgErr.Code {
+	case codeExclusionViolation:
+		return storage.ErrDateBusy
+	case codeUniqueViolation:
+		return storage.ErrEventAlreadyExist
+	default:
+		return err
+	}
 }

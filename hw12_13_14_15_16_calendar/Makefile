@@ -67,5 +67,8 @@ lint: install-lint-deps
 migrate:
 	goose -dir migrations postgres "$(DSN)" up
 
-.PHONY: build run build-img run-img version test lint migrate
+test-sql:
+	CALENDAR_TEST_DSN="$(DSN)" go test -race -count=1 ./internal/storage/sql/...
+
+.PHONY: build run build-img run-img version test lint migrate test-sql
 
