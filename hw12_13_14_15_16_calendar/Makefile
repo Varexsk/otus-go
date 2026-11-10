@@ -18,6 +18,7 @@ RABBIT_PORT ?= 5672
 RABBIT_PORT_UI ?= 15672
 RABBIT_CONTAINER := rabbitmq
 
+DSN ?= postgres://calendar:calendar@localhost:5432/calendar?sslmode=disable
 
 run-postgres:
 	docker run -d --name $(POSTGRES_CONTAINER) \
@@ -40,7 +41,7 @@ build:
 	go build -v -o $(BIN) -ldflags "$(LDFLAGS)" ./cmd/calendar
 
 run: build
-	$(BIN) -config ./configs/config.toml
+	$(BIN) -config ./configs/config.yaml
 
 build-img:
 	docker build \
@@ -55,12 +56,19 @@ version: build
 	$(BIN) version
 
 test:
-	go test -race ./internal/... ./pkg/...
+	go test -race ./...
 
 install-lint-deps:
-	(which golangci-lint > /dev/null) || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(shell go env GOPATH)/bin v1.57.2
+	(which golangci-lint > /dev/null) || go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.63.4
 
 lint: install-lint-deps
 	golangci-lint run ./...
 
-.PHONY: build run build-img run-img version test lint
+migrate:
+	goose -dir migrations postgres "$(DSN)" up
+
+test-sql:
+	CALENDAR_TEST_DSN="$(DSN)" go test -race -count=1 ./internal/storage/sql/...
+
+.PHONY: build run build-img run-img version test lint migrate test-sql
+
