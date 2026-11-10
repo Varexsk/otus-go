@@ -1,9 +1,12 @@
 logger:
   level: "INFO"
   output: ""
-server:
+http:
   host: "localhost"
   port: 8080
+grpc:
+  host: "localhost"
+  port: 50051
 storage:
   type: "sql"
   dsn: "postgres://calendar:calendar@localhost:5432/calendar?sslmode=disable"

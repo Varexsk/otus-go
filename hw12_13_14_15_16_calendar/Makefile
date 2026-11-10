@@ -70,5 +70,8 @@ migrate:
 test-sql:
 	CALENDAR_TEST_DSN="$(DSN)" go test -race -count=1 ./internal/storage/sql/...
 
-.PHONY: build run build-img run-img version test lint migrate test-sql
+generate:
+	go generate ./...
+
+.PHONY: build run build-img run-img version test lint migrate test-sql generate
 

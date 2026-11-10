@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/varexsk/hw12_13_14_15_calendar/internal/app"
+	"github.com/varexsk/hw12_13_14_15_calendar/internal/config"
 	"github.com/varexsk/hw12_13_14_15_calendar/internal/logger"
 	internalhttp "github.com/varexsk/hw12_13_14_15_calendar/internal/server/http"
 	memorystorage "github.com/varexsk/hw12_13_14_15_calendar/internal/storage/memory"
@@ -41,13 +42,13 @@ func main() {
 }
 
 func run() error {
-	config, err := NewConfig(configFile)
+	cfg, err := config.New(configFile)
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
 	}
 
 	var out io.Writer = os.Stdout
-	if path := config.Logger.Output; path != "" {
+	if path := cfg.Logger.Output; path != "" {
 		err := os.MkdirAll(filepath.Dir(path), 0o755)
 		if err != nil {
 			return fmt.Errorf("create log folder: %w", err)
@@ -59,15 +60,15 @@ func run() error {
 		defer f.Close()
 		out = f
 	}
-	logg, err := logger.New(config.Logger.Level, out)
+	logg, err := logger.New(cfg.Logger.Level, out)
 	if err != nil {
 		return fmt.Errorf("create logger: %w", err)
 	}
 
 	var storage app.Storage
-	switch config.Storage.Type {
-	case SQL:
-		st := sqlstorage.New(config.Storage.DSN)
+	switch cfg.Storage.Type {
+	case config.SQL:
+		st := sqlstorage.New(cfg.Storage.DSN)
 
 		connectCtx, cancelConnect := context.WithTimeout(context.Background(), connectTimeout)
 		err := st.Connect(connectCtx)
@@ -82,13 +83,13 @@ func run() error {
 		}()
 
 		storage = st
-	case Memory:
+	case config.Memory:
 		storage = memorystorage.New()
 	}
 
 	calendar := app.New(logg, storage)
 
-	server := internalhttp.NewServer(logg, calendar, config.ServerAddress())
+	server := internalhttp.NewServer(logg, calendar, cfg.HTTPServer.Address())
 
 	ctx, cancel := signal.NotifyContext(context.Background(),
 		syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
