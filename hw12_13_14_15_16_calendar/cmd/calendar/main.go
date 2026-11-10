@@ -18,6 +18,8 @@ import (
 	sqlstorage "github.com/varexsk/hw12_13_14_15_calendar/internal/storage/sql"
 )
 
+const connectTimeout = 5 * time.Second
+
 var configFile string
 
 func init() {
@@ -65,10 +67,21 @@ func run() error {
 	var storage app.Storage
 	switch config.Storage.Type {
 	case SQL:
-		storage, err = sqlstorage.New(config.Storage.DSN)
+		st := sqlstorage.New(config.Storage.DSN)
+
+		connectCtx, cancelConnect := context.WithTimeout(context.Background(), connectTimeout)
+		err := st.Connect(connectCtx)
+		cancelConnect()
 		if err != nil {
 			return fmt.Errorf("create SQL storage: %w", err)
 		}
+		defer func() {
+			if err := st.Close(context.Background()); err != nil {
+				logg.Error("close SQL storage", "error", err)
+			}
+		}()
+
+		storage = st
 	case Memory:
 		storage = memorystorage.New()
 	}

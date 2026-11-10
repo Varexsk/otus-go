@@ -19,6 +19,8 @@ linters-settings:
           - github.com/varexsk/hw12_13_14_15_calendar
           - github.com/spf13/viper
           - github.com/google/uuid
+          - github.com/jmoiron/sqlx
+          - github.com/jackc/pgx/v5
       Test:
         files:
           - $test

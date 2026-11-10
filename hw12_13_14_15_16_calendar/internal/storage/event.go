@@ -11,7 +11,7 @@ type Event struct {
 	Title        string
 	StartAt      time.Time
 	EndAt        time.Time
-	Body         string
+	Description  string
 	UserID       int64
 	NotifyBefore time.Duration
 }
