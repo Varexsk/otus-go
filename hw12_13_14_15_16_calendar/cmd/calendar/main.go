@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -14,9 +15,11 @@ import (
 	"github.com/varexsk/hw12_13_14_15_calendar/internal/app"
 	"github.com/varexsk/hw12_13_14_15_calendar/internal/config"
 	"github.com/varexsk/hw12_13_14_15_calendar/internal/logger"
+	internalgrpc "github.com/varexsk/hw12_13_14_15_calendar/internal/server/grpc"
 	internalhttp "github.com/varexsk/hw12_13_14_15_calendar/internal/server/http"
 	memorystorage "github.com/varexsk/hw12_13_14_15_calendar/internal/storage/memory"
 	sqlstorage "github.com/varexsk/hw12_13_14_15_calendar/internal/storage/sql"
+	"golang.org/x/sync/errgroup"
 )
 
 const connectTimeout = 5 * time.Second
@@ -89,34 +92,47 @@ func run() error {
 
 	calendar := app.New(logg, storage)
 
-	server := internalhttp.New(logg, calendar, cfg.HTTPServer.Address())
+	httpServer := internalhttp.New(logg, calendar, cfg.HTTPServer.Address())
+	grpcServer := internalgrpc.New(logg, calendar, cfg.GRPCServer.Address())
 
 	ctx, cancel := signal.NotifyContext(context.Background(),
 		syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 	defer cancel()
 
-	stopped := make(chan struct{})
-	go func() {
-		defer close(stopped)
+	g, ctx := errgroup.WithContext(ctx)
+
+	g.Go(func() error {
+		if err := httpServer.Start(ctx); err != nil {
+			return fmt.Errorf("http server: %w", err)
+		}
+		return nil
+	})
+
+	g.Go(func() error {
+		if err := grpcServer.Start(ctx); err != nil {
+			return fmt.Errorf("grpc server: %w", err)
+		}
+		return nil
+	})
+
+	g.Go(func() error {
 		<-ctx.Done()
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
-		defer cancel()
+		stopCtx, stopCancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer stopCancel()
 
-		if err := server.Stop(ctx); err != nil {
-			logg.Error("stop http server: " + err.Error())
-		}
-	}()
+		return errors.Join(
+			httpServer.Stop(stopCtx),
+			grpcServer.Stop(stopCtx),
+		)
+	})
 
 	logg.Info("calendar is running...")
 
-	if err := server.Start(ctx); err != nil {
-		cancel()
-		return fmt.Errorf("start http server: %w", err)
+	if err := g.Wait(); err != nil {
+		return err
 	}
 
-	<-stopped
 	logg.Info("calendar stopped")
-
 	return nil
 }

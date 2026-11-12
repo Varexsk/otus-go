@@ -20,6 +20,10 @@ func (f *fakeLogger) Info(_ string, args ...any) {
 
 func (f *fakeLogger) Error(string, ...any) {}
 
+type stubApp struct {
+	Application
+}
+
 func TestLoggingMiddleware(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -39,6 +43,7 @@ func TestLoggingMiddleware(t *testing.T) {
 			fake := &fakeLogger{}
 			s := &Server{
 				logg: fake,
+				app:  stubApp{},
 			}
 			s.routes().ServeHTTP(rec, httptest.NewRequest(tt.method, tt.path, nil))
 

@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/varexsk/hw12_13_14_15_calendar/internal/storage"
 )
 
 const (
@@ -24,7 +27,12 @@ type Logger interface {
 }
 
 type Application interface {
-	// todo
+	CreateEvent(ctx context.Context, event storage.Event) (uuid.UUID, error)
+	UpdateEvent(ctx context.Context, id uuid.UUID, event storage.Event) error
+	DeleteEvent(ctx context.Context, id uuid.UUID) error
+	ListDay(ctx context.Context, date time.Time) ([]storage.Event, error)
+	ListWeek(ctx context.Context, start time.Time) ([]storage.Event, error)
+	ListMonth(ctx context.Context, month time.Time) ([]storage.Event, error)
 }
 
 func New(logger Logger, app Application, address string) *Server {
