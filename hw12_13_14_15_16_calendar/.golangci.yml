@@ -21,6 +21,8 @@ linters-settings:
           - github.com/google/uuid
           - github.com/jmoiron/sqlx
           - github.com/jackc/pgx/v5
+          - google.golang.org/grpc
+          - google.golang.org/protobuf
       Test:
         files:
           - $test
@@ -29,6 +31,8 @@ linters-settings:
           - github.com/stretchr/testify
           - github.com/varexsk/hw12_13_14_15_calendar
           - github.com/google/uuid
+          - google.golang.org/grpc
+          - google.golang.org/protobuf
 issues:
   exclude-rules:
     - path: _test\.go
