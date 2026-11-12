@@ -3,6 +3,7 @@ package internalhttp
 import (
 	"net"
 	"net/http"
+	"slices"
 	"time"
 )
 
@@ -19,8 +20,8 @@ func (r *statusRecorder) WriteHeader(status int) {
 }
 
 func chain(h http.Handler, mws ...middleware) http.Handler {
-	for i := len(mws) - 1; i >= 0; i-- {
-		h = mws[i](h)
+	for _, mw := range slices.Backward(mws) {
+		h = mw(h)
 	}
 	return h
 }

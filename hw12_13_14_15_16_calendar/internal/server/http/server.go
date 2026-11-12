@@ -27,7 +27,7 @@ type Application interface {
 	// todo
 }
 
-func NewServer(logger Logger, app Application, address string) *Server {
+func New(logger Logger, app Application, address string) *Server {
 	s := &Server{logg: logger, app: app}
 	s.server = &http.Server{
 		Addr:              address,

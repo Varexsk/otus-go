@@ -89,7 +89,7 @@ func run() error {
 
 	calendar := app.New(logg, storage)
 
-	server := internalhttp.NewServer(logg, calendar, cfg.HTTPServer.Address())
+	server := internalhttp.New(logg, calendar, cfg.HTTPServer.Address())
 
 	ctx, cancel := signal.NotifyContext(context.Background(),
 		syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
