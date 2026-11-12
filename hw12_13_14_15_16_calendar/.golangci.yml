@@ -24,6 +24,7 @@ linters-settings:
           - google.golang.org/grpc
           - google.golang.org/protobuf
           - golang.org/x/sync
+          - github.com/rabbitmq/amqp091-go
       Test:
         files:
           - $test

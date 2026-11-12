@@ -125,6 +125,53 @@ func (s *Storage) ListEvents(ctx context.Context, from, to time.Time) ([]storage
 	return events, nil
 }
 
+func (s *Storage) ListEventsToNotify(ctx context.Context, now time.Time) ([]storage.Event, error) {
+	const query = `
+		SELECT id, title, start_at, end_at, description, user_id, notify_before
+		FROM events
+		WHERE notify_before > 0 
+		AND notified_at IS NULL 
+		AND start_at > $1
+		AND start_at - make_interval(secs => notify_before/1e9) <= $1
+		ORDER by start_at ASC
+	`
+	var rows []eventRow
+	if err := s.db.SelectContext(ctx, &rows, query, now); err != nil {
+		return nil, fmt.Errorf("select events: %w", err)
+	}
+
+	events := make([]storage.Event, 0, len(rows))
+	for _, r := range rows {
+		events = append(events, r.toEvent())
+	}
+	return events, nil
+}
+
+func (s *Storage) MarkNotified(ctx context.Context, id uuid.UUID, at time.Time) error {
+	const query = `
+		UPDATE events
+		SET notified_at = $2
+		WHERE id = $1`
+
+	res, err := s.db.ExecContext(ctx, query, id, at)
+	if err != nil {
+		return fmt.Errorf("mark notified event: %w", mapError(err))
+	}
+	return checkAffected(res.RowsAffected())
+}
+
+func (s *Storage) DeleteEventsBefore(ctx context.Context, before time.Time) (int64, error) {
+	res, err := s.db.ExecContext(ctx, `DELETE FROM events WHERE end_at < $1`, before)
+	if err != nil {
+		return 0, fmt.Errorf("delete event: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("rows affected: %w", err)
+	}
+	return n, nil
+}
+
 func checkAffected(n int64, err error) error {
 	if err != nil {
 		return fmt.Errorf("rows affected: %w", err)
