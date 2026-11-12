@@ -70,8 +70,13 @@ migrate:
 test-sql:
 	CALENDAR_TEST_DSN="$(DSN)" go test -race -count=1 ./internal/storage/sql/...
 
+RMQ_URL ?= amqp://$(RABBIT_USER):$(RABBIT_PASSWORD)@localhost:$(RABBIT_PORT)/
+
+test-rmq:
+	CALENDAR_TEST_RMQ_URL="$(RMQ_URL)" go test -race -count=1 ./internal/rmq/...
+
 generate:
 	go generate ./...
 
-.PHONY: build run build-img run-img version test lint migrate test-sql generate
+.PHONY: build run build-img run-img version test lint migrate test-sql test-rmq generate
 

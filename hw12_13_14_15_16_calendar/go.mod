@@ -5,6 +5,7 @@ go 1.25.0
 require (
 	github.com/jackc/pgx/v5 v5.12.0
 	github.com/jmoiron/sqlx v1.4.0
+	github.com/rabbitmq/amqp091-go v1.16.0
 	github.com/spf13/viper v1.21.0
 	golang.org/x/sync v0.22.0
 	google.golang.org/grpc v1.84.0
