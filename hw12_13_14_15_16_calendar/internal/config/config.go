@@ -7,6 +7,7 @@ import (
 	"net"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/spf13/viper"
@@ -97,6 +98,10 @@ func load[T interface{ validate() error }](path string) (T, error) {
 
 	v := viper.New()
 	v.SetConfigFile(path)
+
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	v.AutomaticEnv()
+
 	if err := v.ReadInConfig(); err != nil {
 		return zero, fmt.Errorf("%w: %w", ErrReadConfig, err)
 	}

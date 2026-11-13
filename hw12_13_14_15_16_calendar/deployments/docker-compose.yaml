@@ -1,1 +1,80 @@
-version: "3"
+name: calendar
+
+x-db-dsn: &db-dsn postgres://calendar:calendar@postgres:5432/calendar?sslmode=disable
+x-rabbit-url: &rabbit-url amqp://rabbit:password@rabbitmq:5672/
+
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: calendar
+      POSTGRES_PASSWORD: calendar
+      POSTGRES_DB: calendar
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U calendar -d calendar"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    environment:
+      RABBITMQ_DEFAULT_USER: rabbit
+      RABBITMQ_DEFAULT_PASS: password
+    ports:
+      - "15673:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  migrate:
+    build:
+      context: ..
+      dockerfile: build/migrate/Dockerfile
+    environment:
+      DATABASE_DSN: *db-dsn
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  calendar:
+    build:
+      context: ..
+      dockerfile: build/calendar/Dockerfile
+    environment:
+      STORAGE_DSN: *db-dsn
+    ports:
+      - "8888:8080"
+      - "50051:50051"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  scheduler:
+    build:
+      context: ..
+      dockerfile: build/scheduler/Dockerfile
+    environment:
+      DATABASE_DSN: *db-dsn
+      RABBIT_URL: *rabbit-url
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+  sender:
+    build:
+      context: ..
+      dockerfile: build/sender/Dockerfile
+    environment:
+      RABBIT_URL: *rabbit-url
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
