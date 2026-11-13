@@ -1,0 +1,13 @@
+logger:
+  level: "INFO"
+  output: ""
+rabbit:
+  url: "amqp://rabbit:password@localhost:5672/"
+  exchange: "calendar"
+  queue: "notifications"
+  routing_key: "notification"
+status:
+  url: "amqp://rabbit:password@localhost:5672/"
+  exchange: "calendar"
+  queue: "notification_status"
+  routing_key: "notification_status"
