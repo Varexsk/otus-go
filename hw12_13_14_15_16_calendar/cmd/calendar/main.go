@@ -5,10 +5,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"syscall"
 	"time"
 
@@ -27,7 +25,7 @@ const connectTimeout = 5 * time.Second
 var configFile string
 
 func init() {
-	flag.StringVar(&configFile, "config", "/etc/calendar/config.yaml", "Path to configuration file")
+	flag.StringVar(&configFile, "config", "/etc/calendar/calendar_config.yaml", "Path to configuration file")
 }
 
 func main() {
@@ -45,28 +43,16 @@ func main() {
 }
 
 func run() error {
-	cfg, err := config.New(configFile)
+	cfg, err := config.NewCalendar(configFile)
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
 	}
 
-	var out io.Writer = os.Stdout
-	if path := cfg.Logger.Output; path != "" {
-		err := os.MkdirAll(filepath.Dir(path), 0o755)
-		if err != nil {
-			return fmt.Errorf("create log folder: %w", err)
-		}
-		f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
-		if err != nil {
-			return fmt.Errorf("open log file: %w", err)
-		}
-		defer f.Close()
-		out = f
-	}
-	logg, err := logger.New(cfg.Logger.Level, out)
+	logg, closeLog, err := logger.Open(cfg.Logger.Level, cfg.Logger.Output)
 	if err != nil {
 		return fmt.Errorf("create logger: %w", err)
 	}
+	defer closeLog()
 
 	var storage app.Storage
 	switch cfg.Storage.Type {

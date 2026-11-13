@@ -1,3 +1,4 @@
+// Package config загружает и проверяет конфигурацию всех сервисов календаря.
 package config
 
 import (
@@ -6,6 +7,7 @@ import (
 	"net"
 	"slices"
 	"strconv"
+	"time"
 
 	"github.com/spf13/viper"
 )
@@ -17,6 +19,8 @@ var (
 	ErrHostRequired       = errors.New("host required")
 	ErrInvalidPort        = errors.New("invalid port")
 	ErrReadConfig         = errors.New("read config")
+	ErrRabbitRequired     = errors.New("rabbit setting required")
+	ErrInvalidDuration    = errors.New("duration must be positive")
 )
 
 type StorageType string
@@ -26,11 +30,23 @@ const (
 	Memory StorageType = "memory"
 )
 
-type Config struct {
+type Calendar struct {
 	Logger     LoggerConf
 	HTTPServer ServerConf `mapstructure:"http"`
 	GRPCServer ServerConf `mapstructure:"grpc"`
 	Storage    StorageConf
+}
+
+type Scheduler struct {
+	Logger    LoggerConf
+	Database  DatabaseConf
+	Rabbit    RabbitConf
+	Scheduler SchedulerConf
+}
+
+type Sender struct {
+	Logger LoggerConf
+	Rabbit RabbitConf
 }
 
 type LoggerConf struct {
@@ -48,27 +64,57 @@ type StorageConf struct {
 	DSN  string
 }
 
-func New(path string) (Config, error) {
+type DatabaseConf struct {
+	DSN string
+}
+
+type RabbitConf struct {
+	URL        string
+	Exchange   string
+	Queue      string
+	RoutingKey string `mapstructure:"routing_key"`
+}
+
+type SchedulerConf struct {
+	Interval  time.Duration
+	Retention time.Duration
+}
+
+func NewCalendar(path string) (Calendar, error) {
+	return load[Calendar](path)
+}
+
+func NewScheduler(path string) (Scheduler, error) {
+	return load[Scheduler](path)
+}
+
+func NewSender(path string) (Sender, error) {
+	return load[Sender](path)
+}
+
+func load[T interface{ validate() error }](path string) (T, error) {
+	var zero T
+
 	v := viper.New()
 	v.SetConfigFile(path)
 	if err := v.ReadInConfig(); err != nil {
-		return Config{}, fmt.Errorf("%w: %w", ErrReadConfig, err)
+		return zero, fmt.Errorf("%w: %w", ErrReadConfig, err)
 	}
 
-	var cfg Config
+	var cfg T
 	if err := v.Unmarshal(&cfg); err != nil {
-		return Config{}, fmt.Errorf("parse config: %w", err)
+		return zero, fmt.Errorf("parse config: %w", err)
 	}
 
 	if err := cfg.validate(); err != nil {
-		return Config{}, err
+		return zero, err
 	}
 	return cfg, nil
 }
 
-func (c Config) validate() error {
-	if c.Logger.Level == "" {
-		return ErrLogLevelRequired
+func (c Calendar) validate() error {
+	if err := c.Logger.validate(); err != nil {
+		return err
 	}
 	if err := c.GRPCServer.validate("grpc"); err != nil {
 		return err
@@ -81,6 +127,54 @@ func (c Config) validate() error {
 	}
 	if c.Storage.Type == SQL && c.Storage.DSN == "" {
 		return ErrDSNRequired
+	}
+	return nil
+}
+
+func (c Scheduler) validate() error {
+	if err := c.Logger.validate(); err != nil {
+		return err
+	}
+	if c.Database.DSN == "" {
+		return ErrDSNRequired
+	}
+	if err := c.Rabbit.validate(); err != nil {
+		return err
+	}
+	if c.Scheduler.Interval <= 0 {
+		return fmt.Errorf("scheduler interval: %w", ErrInvalidDuration)
+	}
+	if c.Scheduler.Retention <= 0 {
+		return fmt.Errorf("scheduler retention: %w", ErrInvalidDuration)
+	}
+	return nil
+}
+
+func (c Sender) validate() error {
+	if err := c.Logger.validate(); err != nil {
+		return err
+	}
+	return c.Rabbit.validate()
+}
+
+func (c LoggerConf) validate() error {
+	if c.Level == "" {
+		return ErrLogLevelRequired
+	}
+	return nil
+}
+
+func (c RabbitConf) validate() error {
+	fields := []struct{ name, value string }{
+		{"url", c.URL},
+		{"exchange", c.Exchange},
+		{"queue", c.Queue},
+		{"routing_key", c.RoutingKey},
+	}
+	for _, f := range fields {
+		if f.value == "" {
+			return fmt.Errorf("%w: %s", ErrRabbitRequired, f.name)
+		}
 	}
 	return nil
 }

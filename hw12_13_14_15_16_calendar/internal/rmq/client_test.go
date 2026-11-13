@@ -187,7 +187,7 @@ func TestFailedMessageIsNotRequeued(t *testing.T) {
 	if err := stop(); err != nil {
 		t.Fatalf("consume returned error: %v", err)
 	}
-	
+
 	if err := consumer.Close(); err != nil {
 		t.Fatalf("close: %v", err)
 	}

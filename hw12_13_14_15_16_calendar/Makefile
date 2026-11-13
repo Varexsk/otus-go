@@ -1,4 +1,7 @@
-BIN := "./bin/calendar"
+BIN_DIR := ./bin
+BIN := $(BIN_DIR)/calendar
+BIN_SCHEDULER := $(BIN_DIR)/calendar_scheduler
+BIN_SENDER := $(BIN_DIR)/calendar_sender
 DOCKER_IMG="calendar:develop"
 
 GIT_HASH := $(shell git log --format="%h" -n 1)
@@ -39,9 +42,17 @@ run-rabbit:
 
 build:
 	go build -v -o $(BIN) -ldflags "$(LDFLAGS)" ./cmd/calendar
+	go build -v -o $(BIN_SCHEDULER) -ldflags "$(LDFLAGS)" ./cmd/calendar_scheduler
+	go build -v -o $(BIN_SENDER) -ldflags "$(LDFLAGS)" ./cmd/calendar_sender
 
 run: build
 	$(BIN) -config ./configs/calendar_config.yaml
+
+run-scheduler: build
+	$(BIN_SCHEDULER) -config ./configs/scheduler_config.yaml
+
+run-sender: build
+	$(BIN_SENDER) -config ./configs/sender_config.yaml
 
 build-img:
 	docker build \
@@ -78,5 +89,5 @@ test-rmq:
 generate:
 	go generate ./...
 
-.PHONY: build run build-img run-img version test lint migrate test-sql test-rmq generate
+.PHONY: build run run-scheduler run-sender build-img run-img version test lint migrate test-sql test-rmq generate
 

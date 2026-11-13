@@ -17,7 +17,7 @@ var (
 	ErrNotConfirmed     = errors.New("rmq: message was not confirmed by broker")
 )
 
-type HandlerFunc func(ctx context.Context, body []byte) error
+type HandlerFunc = func(ctx context.Context, body []byte) error
 
 type Config struct {
 	URL        string

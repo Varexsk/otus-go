@@ -1,0 +1,13 @@
+logger:
+  level: "INFO"
+  output: ""
+database:
+  dsn: "postgres://calendar:calendar@localhost:5432/calendar?sslmode=disable"
+rabbit:
+  url: "amqp://rabbit:password@localhost:5672/"
+  exchange: "calendar"
+  queue: "notifications"
+  routing_key: "notification"
+scheduler:
+  interval: "1m"
+  retention: "8760h"

@@ -32,13 +32,13 @@ func writeConfig(t *testing.T, content string) string {
 	return path
 }
 
-func TestNew(t *testing.T) {
-	cfg, err := New(writeConfig(t, validConfig))
+func TestNewCalendar(t *testing.T) {
+	cfg, err := NewCalendar(writeConfig(t, validConfig))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	want := Config{
+	want := Calendar{
 		Logger:     LoggerConf{Level: "INFO"},
 		HTTPServer: ServerConf{Host: "localhost", Port: 8080},
 		GRPCServer: ServerConf{Host: "127.0.0.1", Port: 50051},
@@ -52,11 +52,11 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func TestNewErrors(t *testing.T) {
+func TestNewCalendarErrors(t *testing.T) {
 	t.Run("file not found", func(t *testing.T) {
 		path := filepath.Join(t.TempDir(), "missing.yaml")
 
-		_, err := New(path)
+		_, err := NewCalendar(path)
 		if !errors.Is(err, ErrReadConfig) {
 			t.Errorf("want ErrReadConfig, got %v", err)
 		}
@@ -66,14 +66,14 @@ func TestNewErrors(t *testing.T) {
 	})
 
 	t.Run("broken yaml", func(t *testing.T) {
-		_, err := New(writeConfig(t, "http: [unclosed"))
+		_, err := NewCalendar(writeConfig(t, "http: [unclosed"))
 		if !errors.Is(err, ErrReadConfig) {
 			t.Errorf("want ErrReadConfig, got %v", err)
 		}
 	})
 
 	t.Run("wrong field type", func(t *testing.T) {
-		_, err := New(writeConfig(t, "http:\n  port: \"not-a-number\"\n"))
+		_, err := NewCalendar(writeConfig(t, "http:\n  port: \"not-a-number\"\n"))
 		if err == nil {
 			t.Fatal("want parse error, got nil")
 		}
@@ -83,19 +83,19 @@ func TestNewErrors(t *testing.T) {
 	})
 
 	t.Run("invalid values return zero config", func(t *testing.T) {
-		cfg, err := New(writeConfig(t, "logger:\n  level: \"INFO\"\n"))
+		cfg, err := NewCalendar(writeConfig(t, "logger:\n  level: \"INFO\"\n"))
 		if err == nil {
 			t.Fatal("want validation error, got nil")
 		}
-		if cfg != (Config{}) {
+		if cfg != (Calendar{}) {
 			t.Errorf("want zero config on error, got %+v", cfg)
 		}
 	})
 }
 
-func TestValidate(t *testing.T) {
-	valid := func() Config {
-		return Config{
+func TestValidateCalendar(t *testing.T) {
+	valid := func() Calendar {
+		return Calendar{
 			Logger:     LoggerConf{Level: "INFO"},
 			HTTPServer: ServerConf{Host: "localhost", Port: 8080},
 			GRPCServer: ServerConf{Host: "localhost", Port: 50051},
@@ -105,59 +105,59 @@ func TestValidate(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		modify  func(c *Config)
+		modify  func(c *Calendar)
 		wantErr error
 	}{
 		{
 			name:   "valid memory",
-			modify: func(_ *Config) {},
+			modify: func(_ *Calendar) {},
 		},
 		{
 			name:   "valid sql with dsn",
-			modify: func(c *Config) { c.Storage = StorageConf{Type: SQL, DSN: "postgres://x"} },
+			modify: func(c *Calendar) { c.Storage = StorageConf{Type: SQL, DSN: "postgres://x"} },
 		},
 		{
 			name:    "empty log level",
-			modify:  func(c *Config) { c.Logger.Level = "" },
+			modify:  func(c *Calendar) { c.Logger.Level = "" },
 			wantErr: ErrLogLevelRequired,
 		},
 		{
 			name:    "empty http host",
-			modify:  func(c *Config) { c.HTTPServer.Host = "" },
+			modify:  func(c *Calendar) { c.HTTPServer.Host = "" },
 			wantErr: ErrHostRequired,
 		},
 		{
 			name:    "empty grpc host",
-			modify:  func(c *Config) { c.GRPCServer.Host = "" },
+			modify:  func(c *Calendar) { c.GRPCServer.Host = "" },
 			wantErr: ErrHostRequired,
 		},
 		{
 			name:    "zero port",
-			modify:  func(c *Config) { c.HTTPServer.Port = 0 },
+			modify:  func(c *Calendar) { c.HTTPServer.Port = 0 },
 			wantErr: ErrInvalidPort,
 		},
 		{
 			name:    "negative port",
-			modify:  func(c *Config) { c.GRPCServer.Port = -1 },
+			modify:  func(c *Calendar) { c.GRPCServer.Port = -1 },
 			wantErr: ErrInvalidPort,
 		},
 		{
 			name:    "port too big",
-			modify:  func(c *Config) { c.HTTPServer.Port = 65536 },
+			modify:  func(c *Calendar) { c.HTTPServer.Port = 65536 },
 			wantErr: ErrInvalidPort,
 		},
 		{
 			name:   "max port",
-			modify: func(c *Config) { c.HTTPServer.Port = 65535 },
+			modify: func(c *Calendar) { c.HTTPServer.Port = 65535 },
 		},
 		{
 			name:    "unknown storage type",
-			modify:  func(c *Config) { c.Storage.Type = "redis" },
+			modify:  func(c *Calendar) { c.Storage.Type = "redis" },
 			wantErr: ErrInvalidStorageType,
 		},
 		{
 			name:    "sql without dsn",
-			modify:  func(c *Config) { c.Storage = StorageConf{Type: SQL} },
+			modify:  func(c *Calendar) { c.Storage = StorageConf{Type: SQL} },
 			wantErr: ErrDSNRequired,
 		},
 	}
