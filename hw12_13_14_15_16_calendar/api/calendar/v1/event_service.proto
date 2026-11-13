@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package calendar.v1;
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/varexsk/hw12_13_14_15_calendar/internal/server/grpc/pb;pb";
+
+message Event {
+    string id = 1;
+    string title = 2;
+    google.protobuf.Timestamp start_at = 3;
+    google.protobuf.Timestamp end_at = 4;
+    string description = 5;
+    int64 user_id = 6;
+    google.protobuf.Duration notify_before = 7;
+}
+
+message CreateEventRequest {
+    Event event = 1;
+}
+
+message CreateEventResponse {
+    string id = 1;
+}
+
+message UpdateEventRequest {
+    string id = 1;
+    Event event = 2;
+}
+
+message UpdateEventResponse {}
+
+message DeleteEventRequest {
+    string id = 1;
+}
+
+message DeleteEventResponse {}
+
+message ListDayRequest {
+    google.protobuf.Timestamp date = 1;
+}
+
+message ListDayResponse {
+    repeated Event events = 1;
+}
+
+message ListWeekRequest {
+    google.protobuf.Timestamp start = 1;
+}
+
+message ListWeekResponse {
+    repeated Event events = 1;
+}
+
+message ListMonthRequest {
+    google.protobuf.Timestamp month = 1;
+}
+
+message ListMonthResponse {
+    repeated Event events = 1;
+}
+
+service EventService {
+    rpc CreateEvent(CreateEventRequest) returns (CreateEventResponse);
+    rpc UpdateEvent(UpdateEventRequest) returns (UpdateEventResponse);
+    rpc DeleteEvent(DeleteEventRequest) returns (DeleteEventResponse);
+    rpc ListDay(ListDayRequest) returns (ListDayResponse);
+    rpc ListWeek(ListWeekRequest) returns (ListWeekResponse);
+    rpc ListMonth(ListMonthRequest) returns (ListMonthResponse);
+}
