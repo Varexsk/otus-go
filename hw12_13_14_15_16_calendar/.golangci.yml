@@ -3,6 +3,7 @@ run:
   build-tags:
     - bench
     - !bench
+    - integration
 
 linters-settings:
   funlen:

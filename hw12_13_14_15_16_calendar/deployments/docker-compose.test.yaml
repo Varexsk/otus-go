@@ -1,0 +1,25 @@
+services:
+  calendar:
+    ports: !reset []
+
+  rabbitmq:
+    ports: !reset []
+
+  scheduler:
+    environment:
+      SCHEDULER_INTERVAL: 1s
+
+  integration-tests:
+    build:
+      context: ..
+      dockerfile: build/integration/Dockerfile
+    environment:
+      CALENDAR_API_URL: http://calendar:8080
+      RABBIT_URL: amqp://rabbit:password@rabbitmq:5672/
+    depends_on:
+      calendar:
+        condition: service_healthy
+      scheduler:
+        condition: service_started
+      sender:
+        condition: service_started

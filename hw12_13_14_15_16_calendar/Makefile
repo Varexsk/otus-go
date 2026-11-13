@@ -72,6 +72,16 @@ up:
 down:
 	$(COMPOSE) down
 
+COMPOSE_TEST := docker compose -p calendar-test -f deployments/docker-compose.yaml -f deployments/docker-compose.test.yaml
+
+integration-tests:
+	$(COMPOSE_TEST) build
+	$(COMPOSE_TEST) run --rm -T integration-tests; \
+	code=$$?; \
+	if [ $$code -ne 0 ]; then $(COMPOSE_TEST) logs scheduler sender; fi; \
+	$(COMPOSE_TEST) down --remove-orphans; \
+	exit $$code
+
 version: build
 	$(BIN) version
 
@@ -98,5 +108,5 @@ test-rmq:
 generate:
 	go generate ./...
 
-.PHONY: build run run-scheduler run-sender build-img run-img up down version test lint migrate test-sql test-rmq generate
+.PHONY: build run run-scheduler run-sender build-img run-img up down integration-tests version test lint migrate test-sql test-rmq generate
 

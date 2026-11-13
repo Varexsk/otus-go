@@ -48,6 +48,7 @@ type Scheduler struct {
 type Sender struct {
 	Logger LoggerConf
 	Rabbit RabbitConf
+	Status RabbitConf
 }
 
 type LoggerConf struct {
@@ -159,7 +160,13 @@ func (c Sender) validate() error {
 	if err := c.Logger.validate(); err != nil {
 		return err
 	}
-	return c.Rabbit.validate()
+	if err := c.Rabbit.validate(); err != nil {
+		return err
+	}
+	if err := c.Status.validate(); err != nil {
+		return fmt.Errorf("status: %w", err)
+	}
+	return nil
 }
 
 func (c LoggerConf) validate() error {

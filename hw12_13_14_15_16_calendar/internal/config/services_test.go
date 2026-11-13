@@ -29,6 +29,11 @@ rabbit:
   exchange: "calendar"
   queue: "notifications"
   routing_key: "notification"
+status:
+  url: "amqp://user:pass@localhost:5672/"
+  exchange: "calendar"
+  queue: "notification_status"
+  routing_key: "notification_status"
 `
 
 var validRabbit = RabbitConf{
@@ -36,6 +41,13 @@ var validRabbit = RabbitConf{
 	Exchange:   "calendar",
 	Queue:      "notifications",
 	RoutingKey: "notification",
+}
+
+var validStatus = RabbitConf{
+	URL:        "amqp://user:pass@localhost:5672/",
+	Exchange:   "calendar",
+	Queue:      "notification_status",
+	RoutingKey: "notification_status",
 }
 
 func TestNewScheduler(t *testing.T) {
@@ -64,7 +76,7 @@ func TestNewSender(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	want := Sender{Logger: LoggerConf{Level: "INFO"}, Rabbit: validRabbit}
+	want := Sender{Logger: LoggerConf{Level: "INFO"}, Rabbit: validRabbit, Status: validStatus}
 	if cfg != want {
 		t.Errorf("config mismatch:\n got: %+v\nwant: %+v", cfg, want)
 	}
@@ -111,9 +123,10 @@ func TestValidateSender(t *testing.T) {
 		cfg     Sender
 		wantErr error
 	}{
-		{"valid", Sender{Logger: LoggerConf{Level: "INFO"}, Rabbit: validRabbit}, nil},
-		{"empty log level", Sender{Rabbit: validRabbit}, ErrLogLevelRequired},
-		{"no rabbit", Sender{Logger: LoggerConf{Level: "INFO"}}, ErrRabbitRequired},
+		{"valid", Sender{Logger: LoggerConf{Level: "INFO"}, Rabbit: validRabbit, Status: validStatus}, nil},
+		{"empty log level", Sender{Rabbit: validRabbit, Status: validStatus}, ErrLogLevelRequired},
+		{"no rabbit", Sender{Logger: LoggerConf{Level: "INFO"}, Status: validStatus}, ErrRabbitRequired},
+		{"no status", Sender{Logger: LoggerConf{Level: "INFO"}, Rabbit: validRabbit}, ErrRabbitRequired},
 	}
 
 	for _, tt := range tests {

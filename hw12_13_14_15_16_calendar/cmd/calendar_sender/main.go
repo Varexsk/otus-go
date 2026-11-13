@@ -51,8 +51,18 @@ func run() error {
 		}
 	}()
 
+	status := rmq.New(rmq.Config(cfg.Status))
+	if err := status.Connect(context.Background()); err != nil {
+		return fmt.Errorf("connect to rabbitmq (status): %w", err)
+	}
+	defer func() {
+		if err := status.Close(); err != nil {
+			logg.Error("close rabbitmq (status)", "error", err)
+		}
+	}()
+
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 	defer cancel()
 
-	return sender.New(logg, queue).Run(ctx)
+	return sender.New(logg, queue, status).Run(ctx)
 }

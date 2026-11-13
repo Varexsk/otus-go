@@ -14,6 +14,14 @@ type Notification struct {
 	UserID  int64     `json:"userId"`
 }
 
+const StatusSent = "sent"
+
+type Status struct {
+	EventID uuid.UUID `json:"eventId"`
+	Status  string    `json:"status"`
+	SentAt  time.Time `json:"sentAt"`
+}
+
 func FromEvent(e storage.Event) Notification {
 	return Notification{
 		EventID: e.ID,

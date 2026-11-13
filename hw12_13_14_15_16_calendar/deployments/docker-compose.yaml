@@ -49,6 +49,11 @@ services:
     ports:
       - "8888:8080"
       - "50051:50051"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:8080/hello"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -74,6 +79,7 @@ services:
       dockerfile: build/sender/Dockerfile
     environment:
       RABBIT_URL: *rabbit-url
+      STATUS_URL: *rabbit-url
     depends_on:
       rabbitmq:
         condition: service_healthy
