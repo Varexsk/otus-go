@@ -49,7 +49,7 @@ func TestNewScheduler(t *testing.T) {
 		Database: DatabaseConf{DSN: "postgres://user:pass@localhost:5432/db"},
 		Rabbit:   validRabbit,
 		Scheduler: SchedulerConf{
-			Interval:  time.Minute,         
+			Interval:  time.Minute,
 			Retention: 365 * 24 * time.Hour,
 		},
 	}
