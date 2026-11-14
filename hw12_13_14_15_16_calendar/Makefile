@@ -5,6 +5,7 @@ BIN_SENDER := $(BIN_DIR)/calendar_sender
 IMG_CALENDAR := calendar:develop
 IMG_SCHEDULER := calendar-scheduler:develop
 IMG_SENDER := calendar-sender:develop
+IMG_MIGRATE := calendar-migrate:develop
 
 GIT_HASH := $(shell git log --format="%h" -n 1)
 LDFLAGS := -X main.release="develop" -X main.buildDate=$(shell date -u +%Y-%m-%dT%H:%M:%S) -X main.gitHash=$(GIT_HASH)
@@ -60,9 +61,25 @@ build-img:
 	docker build --build-arg=LDFLAGS="$(LDFLAGS)" -t $(IMG_CALENDAR) -f build/calendar/Dockerfile .
 	docker build --build-arg=LDFLAGS="$(LDFLAGS)" -t $(IMG_SCHEDULER) -f build/scheduler/Dockerfile .
 	docker build --build-arg=LDFLAGS="$(LDFLAGS)" -t $(IMG_SENDER) -f build/sender/Dockerfile .
+	docker build --build-arg=LDFLAGS="$(LDFLAGS)" -t $(IMG_MIGRATE) -f build/migrate/Dockerfile .
 
 run-img: build-img
 	docker run --rm -p 8888:8080 -e STORAGE_TYPE=memory $(IMG_CALENDAR)
+
+HELM_RELEASE := calendar
+HELM_CHART := deployments/helm/calendar
+
+k8s-load-images: build-img
+	minikube image load $(IMG_CALENDAR)
+	minikube image load $(IMG_SCHEDULER)
+	minikube image load $(IMG_SENDER)
+	minikube image load $(IMG_MIGRATE)
+
+helm-install:
+	helm upgrade --install $(HELM_RELEASE) $(HELM_CHART)
+
+helm-uninstall:
+	helm uninstall $(HELM_RELEASE)
 
 COMPOSE := docker compose -f deployments/docker-compose.yaml
 
@@ -108,5 +125,5 @@ test-rmq:
 generate:
 	go generate ./...
 
-.PHONY: build run run-scheduler run-sender build-img run-img up down integration-tests version test lint migrate test-sql test-rmq generate
+.PHONY: build run run-scheduler run-sender build-img run-img k8s-load-images helm-install helm-uninstall up down integration-tests version test lint migrate test-sql test-rmq generate
 

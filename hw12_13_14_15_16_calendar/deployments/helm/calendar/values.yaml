@@ -1,0 +1,38 @@
+imagePullPolicy: Never
+
+images:
+  calendar: calendar:develop
+  scheduler: calendar-scheduler:develop
+  sender: calendar-sender:develop
+  migrate: calendar-migrate:develop
+
+calendar:
+  replicas: 1
+  logLevel: INFO
+  httpPort: 8080
+  grpcPort: 50051
+
+scheduler:
+  logLevel: INFO
+  interval: 1m
+  retention: 8760h
+
+sender:
+  replicas: 1
+  logLevel: INFO
+
+postgres:
+  image: postgres:17
+  user: calendar
+  password: calendar
+  database: calendar
+
+rabbitmq:
+  image: rabbitmq:4-management
+  user: rabbit
+  password: password
+
+ingress:
+  enabled: true
+  className: nginx
+  host: calendar.local

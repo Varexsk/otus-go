@@ -1,0 +1,6 @@
+apiVersion: v2
+name: calendar
+description: "Calendar service: API, scheduler, sender, PostgreSQL, RabbitMQ"
+type: application
+version: 0.1.0
+appVersion: "develop"
