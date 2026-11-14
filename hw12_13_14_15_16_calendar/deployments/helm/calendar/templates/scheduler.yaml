@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-scheduler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-scheduler
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-scheduler
+    spec:
+      initContainers:
+        {{- include "calendar.waitFor" (dict "root" . "image" .Values.images.scheduler "host" (printf "%s-calendar" .Release.Name) "port" .Values.calendar.httpPort) | nindent 8 }}
+        {{- include "calendar.waitFor" (dict "root" . "image" .Values.images.scheduler "host" (printf "%s-rabbitmq" .Release.Name) "port" 5672) | nindent 8 }}
+      containers:
+        - name: scheduler
+          image: {{ .Values.images.scheduler }}
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          env:
+            {{- include "calendar.secretEnv" (dict "root" . "name" "DATABASE_DSN" "key" "DATABASE_DSN") | nindent 12 }}
+            {{- include "calendar.secretEnv" (dict "root" . "name" "RABBIT_URL" "key" "RABBIT_URL") | nindent 12 }}
+            - name: LOGGER_LEVEL
+              value: {{ .Values.scheduler.logLevel | quote }}
+            - name: SCHEDULER_INTERVAL
+              value: {{ .Values.scheduler.interval | quote }}
+            - name: SCHEDULER_RETENTION
+              value: {{ .Values.scheduler.retention | quote }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-scheduler
+spec:
+  clusterIP: None
+  selector:
+    app: {{ .Release.Name }}-scheduler

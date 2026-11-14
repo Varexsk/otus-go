@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-sender
+spec:
+  replicas: {{ .Values.sender.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-sender
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-sender
+    spec:
+      initContainers:
+        {{- include "calendar.waitFor" (dict "root" . "image" .Values.images.sender "host" (printf "%s-rabbitmq" .Release.Name) "port" 5672) | nindent 8 }}
+      containers:
+        - name: sender
+          image: {{ .Values.images.sender }}
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          env:
+            {{- include "calendar.secretEnv" (dict "root" . "name" "RABBIT_URL" "key" "RABBIT_URL") | nindent 12 }}
+            {{- include "calendar.secretEnv" (dict "root" . "name" "STATUS_URL" "key" "RABBIT_URL") | nindent 12 }}
+            - name: LOGGER_LEVEL
+              value: {{ .Values.sender.logLevel | quote }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-sender
+spec:
+  clusterIP: None
+  selector:
+    app: {{ .Release.Name }}-sender

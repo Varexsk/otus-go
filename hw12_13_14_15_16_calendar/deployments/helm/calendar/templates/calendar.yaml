@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-calendar
+spec:
+  replicas: {{ .Values.calendar.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-calendar
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-calendar
+    spec:
+      initContainers:
+        - name: migrate
+          image: {{ .Values.images.migrate }}
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          env:
+            {{- include "calendar.secretEnv" (dict "root" . "name" "DATABASE_DSN" "key" "DATABASE_DSN") | nindent 12 }}
+      containers:
+        - name: calendar
+          image: {{ .Values.images.calendar }}
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          env:
+            {{- include "calendar.secretEnv" (dict "root" . "name" "STORAGE_DSN" "key" "DATABASE_DSN") | nindent 12 }}
+            - name: STORAGE_TYPE
+              value: sql
+            - name: LOGGER_LEVEL
+              value: {{ .Values.calendar.logLevel | quote }}
+            - name: HTTP_PORT
+              value: {{ .Values.calendar.httpPort | quote }}
+            - name: GRPC_PORT
+              value: {{ .Values.calendar.grpcPort | quote }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.calendar.httpPort }}
+            - name: grpc
+              containerPort: {{ .Values.calendar.grpcPort }}
+          readinessProbe:
+            httpGet:
+              path: /hello
+              port: http
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /hello
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-calendar
+spec:
+  selector:
+    app: {{ .Release.Name }}-calendar
+  ports:
+    - name: http
+      port: {{ .Values.calendar.httpPort }}
+      targetPort: http
+    - name: grpc
+      port: {{ .Values.calendar.grpcPort }}
+      targetPort: grpc
